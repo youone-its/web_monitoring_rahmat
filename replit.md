@@ -1,6 +1,6 @@
 # Overview
 
-SmartMonitor is a real-time monitoring dashboard application built to track GPS locations, camera feeds, and device conditions. The application provides a responsive web interface for monitoring multiple devices with live updates via WebSocket connections. It displays device status information including battery levels, temperature readings, network connectivity, and system performance metrics on an interactive map-based dashboard.
+RAHMAT Monitor is a real-time monitoring dashboard application built to track GPS locations, camera feeds, and device conditions. The application provides a responsive web interface for monitoring multiple devices with live updates via WebSocket connections. It displays device status information including battery levels, temperature readings, network connectivity, and system performance metrics on an interactive map-based dashboard. The application includes a comprehensive tutorial center with video guides and articles for user education.
 
 # User Preferences
 
@@ -19,10 +19,11 @@ The application follows a monolithic architecture with clear separation between 
 - **UI Framework**: React 18 with TypeScript and modern hooks
 - **Styling**: Tailwind CSS with shadcn/ui component library for consistent design
 - **State Management**: TanStack Query for server state management and caching
-- **Routing**: Wouter for lightweight client-side routing
+- **Routing**: Wouter for lightweight client-side routing with Dashboard and Tutorial pages
 - **Real-time Updates**: Custom WebSocket hook for live data synchronization
 - **Maps**: Leaflet integration for GPS location visualization
 - **Component Structure**: Modular dashboard widgets for GPS maps, camera feeds, device status, and statistics
+- **Tutorial System**: Comprehensive tutorial center with video guides and educational articles
 
 ## Backend Architecture
 - **API Design**: RESTful endpoints with WebSocket server for real-time communication
@@ -44,6 +45,8 @@ The database schema supports three main entities:
 - **Real-time Indicators**: Live status updates and notification banners
 - **Interactive Maps**: Clickable device markers with detailed popups
 - **Dashboard Widgets**: Modular card-based layout for different monitoring aspects
+- **Tutorial Interface**: Educational content with YouTube video integration and article browsing
+- **Navigation**: Simplified two-page navigation (Dashboard and Tutorial)
 
 # External Dependencies
 

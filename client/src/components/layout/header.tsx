@@ -15,8 +15,7 @@ export default function Header() {
 
   const navigation = [
     { name: "Dashboard", href: "/" },
-    { name: "Devices", href: "/devices" },
-    { name: "Settings", href: "/settings" },
+    { name: "Tutorial", href: "/tutorial" },
   ];
 
   return (
@@ -30,7 +29,7 @@ export default function Header() {
                 <Satellite className="text-white text-sm" size={16} />
               </div>
               <span className="text-xl font-bold text-secondary" data-testid="app-name">
-                SmartMonitor
+                RAHMAT Monitor
               </span>
             </Link>
           </div>
