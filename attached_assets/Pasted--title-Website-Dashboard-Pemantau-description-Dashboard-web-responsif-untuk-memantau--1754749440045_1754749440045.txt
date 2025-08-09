@@ -1,0 +1,99 @@
+{
+  "title": "Website Dashboard Pemantau",
+  "description": "Dashboard web responsif untuk memantau lokasi berbasis GPS, feed kamera, dan kondisi perangkat secara real-time.",
+  "style": {
+    "theme": "modern clean",
+    "colorScheme": {
+      "primary": "#2563eb",
+      "secondary": "#1e293b",
+      "background": "#f9fafb",
+      "accent": "#22c55e"
+    },
+    "font": "Inter, sans-serif",
+    "layout": "responsive grid"
+  },
+  "pages": [
+    {
+      "name": "Dashboard",
+      "sections": [
+        {
+          "type": "header",
+          "content": {
+            "logo": "text:SmartMonitor",
+            "menu": ["Dashboard", "Devices", "Settings"],
+            "userProfile": true
+          }
+        },
+        {
+          "type": "main",
+          "layout": "3-column",
+          "widgets": [
+            {
+              "title": "Peta Lokasi GPS",
+              "type": "map",
+              "dataSource": "GPS API",
+              "features": [
+                "real-time location updates",
+                "zoom controls",
+                "marker status color coding"
+              ]
+            },
+            {
+              "title": "Feed Kamera",
+              "type": "video-stream",
+              "dataSource": "RTSP / WebRTC",
+              "features": [
+                "live feed",
+                "full-screen toggle",
+                "snapshot capture"
+              ]
+            },
+            {
+              "title": "Kondisi Perangkat",
+              "type": "device-status",
+              "dataSource": "Device API",
+              "features": [
+                "battery level",
+                "temperature",
+                "connectivity status"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "responsiveness": {
+    "mobile": {
+      "layout": "stacked",
+      "widgets": "full width"
+    },
+    "tablet": {
+      "layout": "two-column"
+    },
+    "desktop": {
+      "layout": "three-column"
+    }
+  },
+  "interactions": [
+    {
+      "trigger": "marker click on map",
+      "action": "show device details popup"
+    },
+    {
+      "trigger": "camera feed click",
+      "action": "open full-screen mode"
+    },
+    {
+      "trigger": "low battery alert",
+      "action": "show notification banner"
+    }
+  ],
+  "techStack": [
+    "React.js",
+    "Tailwind CSS",
+    "Leaflet.js for maps",
+    "WebRTC for camera feed",
+    "REST API / WebSocket for device data"
+  ]
+}
