@@ -72,7 +72,7 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
   }, []);
 
   useEffect(() => {
-    if (!mapInstanceRef.current || !locations || !devices.length) return;
+    if (!mapInstanceRef.current || !locations || !Array.isArray(locations) || !devices.length) return;
 
     // Clear existing markers
     markersRef.current.forEach(marker => {
@@ -81,7 +81,7 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
     markersRef.current.clear();
 
     // Add new markers
-    locations.forEach((location: any) => {
+    (locations as any[]).forEach((location: any) => {
       const device = devices.find(d => d.id === location.deviceId);
       if (!device) return;
 
@@ -117,7 +117,7 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
     // Global function for popup buttons
     (window as any).showDeviceDetails = (deviceId: string) => {
       const device = devices.find(d => d.id === deviceId);
-      const location = locations.find((l: any) => l.deviceId === deviceId);
+      const location = Array.isArray(locations) ? (locations as any[]).find((l: any) => l.deviceId === deviceId) : null;
       
       if (device && location) {
         setSelectedDevice({

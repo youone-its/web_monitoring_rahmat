@@ -98,6 +98,43 @@
 .leaflet-container {
   border-radius: 12px;
   font-family: 'Inter', sans-serif;
+  z-index: 1 !important;
+}
+
+/* Fix Leaflet control z-index */
+.leaflet-control-zoom,
+.leaflet-control-attribution {
+  z-index: 2 !important;
+}
+
+/* Ensure popups don't interfere with UI */
+.leaflet-popup-pane {
+  z-index: 10 !important;
+}
+
+/* Fix any map overlay issues */
+.leaflet-map-pane {
+  z-index: 1 !important;
+}
+
+/* Ensure modal dialogs and overlays have proper z-index */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
+.dialog-overlay,
+[data-state="open"][data-side] {
+  z-index: 100 !important;
+}
+
+/* Ensure fullscreen video modal appears above everything */
+.fullscreen-modal {
+  z-index: 9999 !important;
+}
+
+/* Fix dropdown menus */
+[role="menu"] {
+  z-index: 50 !important;
 }
 
 /* Status indicator animation */
