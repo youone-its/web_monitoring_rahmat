@@ -1,3 +1,4 @@
+import { getSystemDevice } from "./systeminfo";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
@@ -5,6 +6,15 @@ import { storage } from "./storage";
 import { insertDeviceSchema, insertGpsLocationSchema, insertAlertSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Real system info endpoint
+  app.get("/api/system-device", async (_req, res) => {
+    try {
+      const device = await getSystemDevice();
+      res.json(device);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch system device info" });
+    }
+  });
   const httpServer = createServer(app);
 
   // WebSocket server for real-time updates
@@ -200,47 +210,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (device.status === 'online') {
           // Simulate battery drain
           const newBatteryLevel = Math.max(15, device.batteryLevel! - Math.random() * 2);
-          
-          // Simulate temperature fluctuation
-          const newTemperature = device.temperature! + (Math.random() - 0.5) * 4;
-          
-          // Update device
-          const updatedDevice = await storage.updateDevice(device.id, {
-            batteryLevel: Math.round(newBatteryLevel),
-            temperature: Math.round(newTemperature * 10) / 10,
-            cpuUsage: Math.round((20 + Math.random() * 60) * 10) / 10,
-            memoryUsage: Math.round((1 + Math.random() * 3) * 10) / 10,
-          });
-
-          if (updatedDevice) {
-            broadcast({ type: 'device_updated', data: updatedDevice });
-
-            // Create low battery alert
-            if (newBatteryLevel <= 20 && device.batteryLevel! > 20) {
-              const alert = await storage.createAlert({
-                deviceId: device.id,
-                type: 'low_battery',
-                message: `Device ${device.name} battery level is critically low at ${Math.round(newBatteryLevel)}%`,
-                severity: 'critical',
-                resolved: false,
-              });
-              broadcast({ type: 'alert_created', data: alert });
-            }
-          }
-
-          // Simulate GPS location updates
-          if (device.type === 'gps' || device.type === 'sensor') {
-            const currentLocation = await storage.getLatestGpsLocation(device.id);
-            if (currentLocation) {
-              const newLocation = await storage.createGpsLocation({
-                deviceId: device.id,
-                latitude: currentLocation.latitude + (Math.random() - 0.5) * 0.001,
-                longitude: currentLocation.longitude + (Math.random() - 0.5) * 0.001,
-                accuracy: 3 + Math.random() * 5,
-              });
-              broadcast({ type: 'location_updated', data: newLocation });
-            }
-          }
         }
       });
     });

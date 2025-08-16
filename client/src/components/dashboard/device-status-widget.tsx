@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Device } from "@shared/schema";
+import type { Device as BaseDevice } from "@shared/schema";
+
+// Extend Device type locally to allow bluetoothDevices for UI (optional, array of string)
+type Device = BaseDevice & {
+  bluetoothDevices?: string[];
+};
 
 interface DeviceStatusWidgetProps {
   devices?: Device[];
@@ -152,29 +157,6 @@ export default function DeviceStatusWidget({ devices = [] }: DeviceStatusWidgetP
           </div>
         </div>
 
-        {/* Temperature Status */}
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-2">
-              <Thermometer className="text-primary text-lg" size={20} />
-              <span className="font-medium text-gray-800">Temperature</span>
-            </div>
-            <span className="text-2xl font-bold text-primary" data-testid="device-temperature">
-              {mainDevice.temperature}°C
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              <div>Normal Range: 20-45°C</div>
-              <div className="mt-1 text-primary font-medium">Status: Normal</div>
-            </div>
-            <div className="text-right text-sm text-gray-600">
-              <div>CPU: <span data-testid="cpu-temperature">{mainDevice.cpuTemp}°C</span></div>
-              <div>GPU: <span data-testid="gpu-temperature">{mainDevice.gpuTemp}°C</span></div>
-            </div>
-          </div>
-        </div>
-
         {/* Connectivity Status */}
         <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
           <div className="flex items-center justify-between mb-3">
@@ -214,6 +196,29 @@ export default function DeviceStatusWidget({ devices = [] }: DeviceStatusWidgetP
                 {formatUptime(mainDevice.uptime!)}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Bluetooth Devices */}
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-200 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-blue-700"><path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75 12 12m0 0-5.25-5.25M12 12l5.25 5.25M12 12l-5.25 5.25M12 3v18" /></svg>
+              </span>
+              <span className="font-medium text-gray-800">Bluetooth Devices</span>
+            </div>
+          </div>
+          <div className="text-sm">
+            {Array.isArray(mainDevice.bluetoothDevices) && mainDevice.bluetoothDevices.length > 0 ? (
+              <ul className="list-disc pl-5 space-y-1" data-testid="bluetooth-devices-list">
+                {mainDevice.bluetoothDevices.map((dev: string, idx: number) => (
+                  <li key={idx} className="text-gray-700">{dev}</li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-gray-500" data-testid="bluetooth-devices-empty">No Bluetooth devices connected</div>
+            )}
           </div>
         </div>
 

@@ -1,0 +1,500 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartMonitor - Dashboard Pemantau</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    primary: '#2563eb',
+                    secondary: '#1e293b',
+                    accent: '#22c55e',
+                    background: '#f9fafb'
+                },
+                fontFamily: {
+                    'inter': ['Inter', 'sans-serif']
+                }
+            }
+        }
+    };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .leaflet-container {
+            height: 100%;
+            border-radius: 12px;
+        }
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .status-indicator {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .notification-banner {
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="font-inter bg-background min-h-screen">
+    <!-- @COMPONENT: Header [Navigation with logo, menu, and user profile] -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo and Brand -->
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                            <i class="fas fa-satellite-dish text-white text-sm"></i>
+                        </div>
+                        <span class="text-xl font-bold text-secondary" data-bind="appName">SmartMonitor</span>
+                    </div>
+                </div>
+
+                <!-- Navigation Menu -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" class="text-primary font-medium border-b-2 border-primary pb-4" data-event="click:navigateTo">Dashboard</a>
+                    <a href="#" class="text-gray-600 hover:text-primary transition-colors duration-200 pb-4" data-event="click:navigateTo">Devices</a>
+                    <a href="#" class="text-gray-600 hover:text-primary transition-colors duration-200 pb-4" data-event="click:navigateTo">Settings</a>
+                </nav>
+
+                <!-- User Profile -->
+                <div class="flex items-center space-x-4">
+                    
+                    <!-- User Avatar -->
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-white text-sm"></i>
+                        </div>
+                        <span class="hidden md:block text-sm font-medium text-secondary" data-bind="user.name">Admin User</span>
+                    </div>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button class="md:hidden p-2 text-gray-600" data-event="click:toggleMobileMenu">
+                    <i class="fas fa-bars text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    
+    <!-- @COMPONENT: Dashboard Main Content [3-column responsive layout] -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dashboard Title -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-secondary">Dashboard Pemantau</h1>
+            <p class="text-gray-600 mt-2">Monitor lokasi GPS, feed kamera, dan kondisi perangkat secara real-time</p>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- @COMPONENT: GPS Map Widget [Interactive map with real-time location updates] -->
+            <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-secondary flex items-center space-x-2">
+                            <i class="fas fa-map-marked-alt text-primary"></i>
+                            <span>Peta Lokasi GPS</span>
+                        </h2>
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                            <div class="w-2 h-2 bg-accent rounded-full status-indicator"></div>
+                            <span data-bind="mapStatus">Live</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div id="map" class="h-80 bg-gray-100 rounded-lg" data-implementation="Leaflet.js map implementation">
+                        <!-- Map will be rendered here -->
+                        <div class="h-full flex items-center justify-center text-gray-500">
+                            <div class="text-center">
+                                <i class="fas fa-map text-4xl mb-4"></i>
+                                <p>Loading GPS Map...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Controls -->
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                        </div>
+                        <button class="text-primary hover:text-blue-700 text-sm font-medium" data-event="click:refreshMap">
+                            <i class="fas fa-sync-alt mr-1"></i>
+                            Refresh
+                        </button>
+                    </div>
+
+                    <!-- Device Legend -->
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Status Legend</h4>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-accent rounded-full"></div>
+                                <span>Online</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                <span>Offline</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                <span>Warning</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                <span>Inactive</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: GPS Map Widget -->
+
+            <!-- @COMPONENT: Camera Feed Widget [Live video stream with full-screen capability] -->
+            <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-secondary flex items-center space-x-2">
+                            <i class="fas fa-video text-primary"></i>
+                            <span>Feed Kamera</span>
+                        </h2>
+                        <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-2 text-sm text-gray-600">
+                                <div class="w-2 h-2 bg-red-500 rounded-full status-indicator"></div>
+                                <span data-bind="cameraStatus">Recording</span>
+                            </div>
+                            <button class="p-2 text-gray-600 hover:text-primary transition-colors duration-200" data-event="click:toggleFullscreen">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="video-container h-80 bg-black rounded-lg relative cursor-pointer" data-event="click:toggleFullscreen" data-implementation="WebRTC video stream implementation">
+                        <!-- Simulated video feed -->
+                        <!-- A security camera view of an industrial facility with monitoring equipment -->
+                        <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600" 
+                             alt="Live camera feed from monitoring device" 
+                             class="w-full h-full object-cover rounded-lg" 
+                             data-mock-image="true" />
+                        
+                        <!-- Video Overlay Controls -->
+                        <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                            <div class="opacity-0 hover:opacity-100 transition-opacity duration-200">
+                                <button class="bg-white bg-opacity-20 backdrop-blur-sm rounded-full p-4 text-white hover:bg-opacity-30">
+                                    <i class="fas fa-play text-2xl"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Live Indicator -->
+                        <div class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-white rounded-full status-indicator"></div>
+                            <span>LIVE</span>
+                        </div>
+
+                        <!-- Timestamp -->
+                        <div class="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm" data-bind="currentTime">
+                            14:32:45
+                        </div>
+                    </div>
+
+                    <!-- Camera Controls -->
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <button class="flex items-center space-x-2 text-sm text-gray-600 hover:text-primary" data-event="click:captureSnapshot">
+                                <i class="fas fa-camera"></i>
+                                <span>Snapshot</span>
+                            </button>
+                            <button class="flex items-center space-x-2 text-sm text-gray-600 hover:text-primary" data-event="click:toggleAudio">
+                                <i class="fas fa-volume-up"></i>
+                                <span>Audio</span>
+                            </button>
+                        </div>
+                        <select class="text-sm border border-gray-300 rounded px-3 py-1" data-bind="selectedCamera" data-event="change:switchCamera">
+                            <option data-mock="true">Camera 01 - Main</option>
+                            <option data-mock="true">Camera 02 - Side</option>
+                            <option data-mock="true">Camera 03 - Rear</option>
+                        </select>
+                    </div>
+
+                    <!-- Recording Info -->
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center justify-between text-sm">
+                            <div>
+                                <span class="text-gray-600">Resolution:</span>
+                                <span class="font-medium ml-1" data-bind="camera.resolution">1920x1080</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">FPS:</span>
+                                <span class="font-medium ml-1" data-bind="camera.fps">30</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: Camera Feed Widget -->
+
+            <!-- @COMPONENT: Device Status Widget [Real-time device monitoring] -->
+            <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-secondary flex items-center space-x-2">
+                            <i class="fas fa-microchip text-primary"></i>
+                            <span>Kondisi Perangkat</span>
+                        </h2>
+                        <button class="text-primary hover:text-blue-700 text-sm font-medium" data-event="click:refreshDeviceStatus">
+                            <i class="fas fa-sync-alt mr-1"></i>
+                            Update
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 space-y-6">
+                    
+                    <!-- Battery Status -->
+                    <div class="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-battery-three-quarters text-accent text-lg"></i>
+                                <span class="font-medium text-gray-800">Battery Level</span>
+                            </div>
+                            <span class="text-2xl font-bold text-accent" data-bind="device.battery">78%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="bg-accent h-3 rounded-full transition-all duration-300" style="width: 78%" data-bind-style="width: device.battery"></div>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-600 mt-2">
+                            <span>Estimated: <span data-bind="device.batteryEstimate">6h 32m</span></span>
+                            <span class="text-accent font-medium">Good</span>
+                        </div>
+                    </div>
+
+                    <!-- Connectivity Status -->
+                    <div id="wifi-card" class="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                        <div class="flex items-center justify-between mb-3" data-bind="device.wifiConnected">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-wifi text-lg" id="wifi-icon"></i>
+                                <span class="font-medium text-gray-800">Connectivity</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 rounded-full status-indicator" id="wifi-dot"></div>
+                                <span class="text-sm font-medium" id="wifi-status"></span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <div class="text-gray-600">Signal Strength</div>
+                                <div class="font-semibold" data-bind="device.signalStrength">-42 dBm</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-600">Network Type</div>
+                                <div class="font-semibold" data-bind="device.networkType">4G LTE</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-600">Data Usage</div>
+                                <div class="font-semibold" data-bind="device.dataUsage">2.3 GB</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-600">Uptime</div>
+                                <div class="font-semibold" data-bind="device.uptime">72h 14m</div>
+                            </div>
+                        </div>
+                        <script>
+                        // Set these values based on your backend or demo data
+                        document.addEventListener('DOMContentLoaded', function() {
+                          // Example: Replace with real data from backend
+                          var wifiConnected = false; // set to true or false
+                          var wifiSSID = null; // set to SSID string or null
+
+                          // If you want to test connected state, set:
+                          // var wifiConnected = true;
+                          // var wifiSSID = "R32-CM";
+
+                          var card = document.getElementById('wifi-card');
+                          var icon = document.getElementById('wifi-icon');
+                          var dot = document.getElementById('wifi-dot');
+                          var status = document.getElementById('wifi-status');
+
+                          if (wifiConnected && wifiSSID) {
+                            card.className = "p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200";
+                            icon.className = 'fas fa-wifi text-accent text-lg';
+                            dot.className = 'w-2 h-2 bg-accent rounded-full status-indicator';
+                            status.className = 'text-sm font-medium text-accent';
+                            status.textContent = 'Connected';
+                          } else {
+                            card.className = "p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-lg border border-red-200";
+                            icon.className = 'fas fa-wifi text-red-500 text-lg';
+                            dot.className = 'w-2 h-2 bg-red-500 rounded-full status-indicator';
+                            status.className = 'text-sm font-medium text-red-600';
+                            status.textContent = 'Not Connected';
+                          }
+                        });
+                        </script>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: Device Status Widget -->
+        </div>
+
+    </main>
+    <!-- @END_COMPONENT: Dashboard Main Content -->
+
+    <!-- Modal for Device Details -->
+    <!-- @STATE: showDeviceModal:boolean = false -->
+    <div id="deviceModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-secondary">Device Details</h3>
+                <button class="text-gray-400 hover:text-gray-600" data-event="click:closeDeviceModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4" data-implementation="Populate with selected device data">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Device ID:</span>
+                    <span class="font-medium" data-bind="selectedDevice.id" data-mock="true">DEV-001</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Location:</span>
+                    <span class="font-medium" data-bind="selectedDevice.location" data-mock="true">-6.2088, 106.8456</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Last Seen:</span>
+                    <span class="font-medium" data-bind="selectedDevice.lastSeen" data-mock="true">2 min ago</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Status:</span>
+                    <span class="font-medium text-accent" data-bind="selectedDevice.status" data-mock="true">Online</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet.js -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+    (function() {
+        // TODO: Implement business logic, API calls, and state management for real application
+        
+        // Initialize Map
+        let map;
+        function initializeMap() {
+            if (typeof L !== 'undefined') {
+                map = L.map('map').setView([-6.2088, 106.8456], 13);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                // Add sample markers
+                const devices = [
+                    { id: 'DEV-001', lat: -6.2088, lng: 106.8456, status: 'online' },
+                    { id: 'DEV-002', lat: -6.2100, lng: 106.8470, status: 'warning' },
+                    { id: 'DEV-003', lat: -6.2076, lng: 106.8443, status: 'offline' }
+                ];
+
+                devices.forEach(device => {
+                    const color = device.status === 'online' ? '#22c55e' : 
+                                 device.status === 'warning' ? '#f59e0b' : '#ef4444';
+                    
+                    const marker = L.circleMarker([device.lat, device.lng], {
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.8,
+                        radius: 8
+                    }).addTo(map);
+
+                    marker.bindPopup(`
+                        <div class="p-2">
+                            <strong>${device.id}</strong><br>
+                            Status: ${device.status}<br>
+                            <button onclick="showDeviceDetails('${device.id}')" class="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm">
+                                View Details
+                            </button>
+                        </div>
+                    `);
+                });
+            }
+        }
+
+        // Show device details modal
+        window.showDeviceDetails = function(deviceId) {
+            const modal = document.getElementById('deviceModal');
+            modal.classList.remove('hidden');
+            // TODO: Populate modal with actual device data
+        };
+
+        // Close modal
+        window.closeDeviceModal = function() {
+            const modal = document.getElementById('deviceModal');
+            modal.classList.add('hidden');
+        };
+
+        // Simulate real-time updates
+        function simulateRealTimeUpdates() {
+            setInterval(() => {
+                // Update battery level
+                const batteryElement = document.querySelector('[data-bind="device.battery"]');
+                if (batteryElement) {
+                    const currentBattery = parseInt(batteryElement.textContent);
+                    const newBattery = Math.max(15, currentBattery + (Math.random() > 0.5 ? 1 : -1));
+                    batteryElement.textContent = `${newBattery}%`;
+                    
+                    // Update battery bar
+                    const batteryBar = document.querySelector('[data-bind-style="width: device.battery"]');
+                    if (batteryBar) {
+                        batteryBar.style.width = `${newBattery}%`;
+                    }
+                    
+                    // Show low battery notification
+                    if (newBattery <= 20) {
+                        showNotification(`Low battery alert: Device battery at ${newBattery}%`);
+                    }
+                }
+
+                // Update timestamp
+                const timeElement = document.querySelector('[data-bind="currentTime"]');
+                if (timeElement) {
+                    const now = new Date();
+                    timeElement.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+                }
+            }, 3000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeMap, 100); // Small delay to ensure DOM is ready
+            simulateRealTimeUpdates();
+        });
+
+        // Handle modal clicks
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('deviceModal');
+            if (e.target === modal) {
+                closeDeviceModal();
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

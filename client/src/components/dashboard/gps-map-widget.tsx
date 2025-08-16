@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { MapPin, RotateCcw, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,13 +28,40 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
   const [selectedDevice, setSelectedDevice] = useState<SelectedDevice | null>(null);
+  // State for user's own location
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoLoading, setGeoLoading] = useState(true);
+  // Get user's current location on mount
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGeoError('Geolocation is not supported by your browser.');
+      setGeoLoading(false);
+      return;
+    }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({
+          latitude: pos.coords.latitude + 0.0023,
+          longitude: pos.coords.longitude +0.0015,
+        });
+        setGeoLoading(false);
+      },
+      (err) => {
+        if (err.code === 1) {
+          setGeoError('Location permission denied. Please allow location access.');
+        } else {
+          setGeoError('Unable to retrieve your location.');
+        }
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  }, []);
 
-  const { data: locations, refetch: refetchLocations } = useQuery({
-    queryKey: ["/api/gps-locations"],
-    refetchInterval: 5000, // Refetch every 5 seconds
-  });
 
-  const onlineDevices = devices.filter(d => d.status === 'online');
+
 
   useEffect(() => {
     async function initializeMap() {
@@ -42,7 +70,6 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
       // Dynamic import of Leaflet
       if (!L) {
         L = (await import('leaflet')).default;
-        
         // Fix for default markers in React
         delete (L.Icon.Default.prototype as any)._getIconUrl;
         L.Icon.Default.mergeOptions({
@@ -52,12 +79,12 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
         });
       }
 
-      const map = L.map(mapRef.current).setView([-6.2088, 106.8456], 13);
-      
+      // Default center, will recenter when locations available
+      const map = L.map(mapRef.current).setView([-6.2088, 106.8456], 13); 
+      console.log('Map initialized');
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
-
       mapInstanceRef.current = map;
     }
 
@@ -71,8 +98,10 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
     };
   }, []);
 
+
+  // Only add marker and center map when both map and userLocation are ready
   useEffect(() => {
-    if (!mapInstanceRef.current || !locations || !Array.isArray(locations) || !devices.length) return;
+    if (!mapInstanceRef.current || !userLocation || !L) return;
 
     // Clear existing markers
     markersRef.current.forEach(marker => {
@@ -80,60 +109,26 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
     });
     markersRef.current.clear();
 
-    // Add new markers
-    (locations as any[]).forEach((location: any) => {
-      const device = devices.find(d => d.id === location.deviceId);
-      if (!device) return;
-
-      const color = device.status === 'online' ? '#22c55e' : 
-                   device.status === 'warning' ? '#f59e0b' : '#ef4444';
-      
-      const marker = L.circleMarker([location.latitude, location.longitude], {
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.8,
-        radius: 8,
-        weight: 2,
-      });
-
-      marker.bindPopup(`
-        <div class="p-2 font-sans">
-          <strong class="text-lg">${device.name}</strong><br>
-          <span class="text-sm text-gray-600">Status: ${device.status}</span><br>
-          <span class="text-sm text-gray-600">Battery: ${device.batteryLevel}%</span><br>
-          <button 
-            onclick="window.showDeviceDetails('${device.id}')" 
-            class="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
-          >
-            View Details
-          </button>
-        </div>
-      `);
-
-      marker.addTo(mapInstanceRef.current);
-      markersRef.current.set(device.id, marker);
+    // Add marker for user's own location
+    const userMarker = L.circleMarker([userLocation.latitude, userLocation.longitude], {
+      color: '#2563eb', // blue
+      fillColor: '#2563eb',
+      fillOpacity: 0.9,
+      radius: 10,
+      weight: 3,
+      className: 'user-location-marker',
     });
+    userMarker.bindPopup(`<div class="p-2 font-sans"><strong class="text-lg">Your Location</strong><br><span class="text-xs">Lat: ${userLocation.latitude.toFixed(6)}, Lng: ${userLocation.longitude.toFixed(6)}</span></div>`);
+    userMarker.addTo(mapInstanceRef.current);
+    userMarker.openPopup();
+    // Center map on marker
+    mapInstanceRef.current.setView([userLocation.latitude, userLocation.longitude], 16, { animate: true });
+    markersRef.current.set('user-location', userMarker);
+  }, [userLocation, mapInstanceRef.current, L]);
 
-    // Global function for popup buttons
-    (window as any).showDeviceDetails = (deviceId: string) => {
-      const device = devices.find(d => d.id === deviceId);
-      const location = Array.isArray(locations) ? (locations as any[]).find((l: any) => l.deviceId === deviceId) : null;
-      
-      if (device && location) {
-        setSelectedDevice({
-          id: device.id,
-          name: device.name,
-          status: device.status,
-          lastSeen: device.lastSeen ? new Date(device.lastSeen).toLocaleString() : 'Unknown',
-          location: `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`,
-        });
-      }
-    };
-  }, [locations, devices]);
 
-  const handleRefresh = () => {
-    refetchLocations();
-  };
+
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -166,99 +161,22 @@ export default function GPSMapWidget({ devices = [] }: GPSMapWidgetProps) {
             className="h-80 bg-gray-100 rounded-lg"
             data-testid="gps-map"
           />
-          
-          {/* Map Controls */}
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Users size={16} />
-              <span data-testid="device-count">
-                {onlineDevices.length} Devices Online
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefresh}
-              className="text-primary hover:text-blue-700 text-sm font-medium"
-              data-testid="refresh-map-button"
-            >
-              <RotateCcw size={16} className="mr-1" />
-              Refresh
-            </Button>
-          </div>
 
-          {/* Device Legend */}
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Status Legend</h4>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {[
-                { status: 'Online', color: '#22c55e' },
-                { status: 'Offline', color: '#ef4444' },
-                { status: 'Warning', color: '#f59e0b' },
-                { status: 'Inactive', color: '#9ca3af' },
-              ].map(({ status, color }) => (
-                <div key={status} className="flex items-center space-x-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: color }}
-                  />
-                  <span>{status}</span>
-                </div>
-              ))}
+          {/* Show loading or error if location is not available */}
+          {geoLoading && (
+            <div className="mt-4 text-center text-sm text-gray-500">Detecting your location...</div>
+          )}
+          {geoError && !geoLoading && (
+            <div className="mt-4 text-center text-sm text-red-600">{geoError}</div>
+          )}
+          {userLocation && !geoLoading && !geoError && (
+            <div className="mt-4 text-center text-sm text-gray-700">
+              <span className="font-medium">Your Coordinates:</span> <span data-testid="user-coords">{(userLocation.latitude + 0.0023).toFixed(6)}, {(userLocation.longitude + 0.0015).toFixed(6)}</span>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Device Details Modal */}
-      <Dialog open={!!selectedDevice} onOpenChange={() => setSelectedDevice(null)}>
-        <DialogContent className="max-w-md" data-testid="device-details-modal">
-          <DialogHeader>
-            <DialogTitle>Device Details</DialogTitle>
-          </DialogHeader>
-          {selectedDevice && (
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Device ID:</span>
-                <span className="font-medium" data-testid="device-id">
-                  {selectedDevice.id}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Name:</span>
-                <span className="font-medium" data-testid="device-name">
-                  {selectedDevice.name}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Location:</span>
-                <span className="font-medium" data-testid="device-location">
-                  {selectedDevice.location}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Last Seen:</span>
-                <span className="font-medium" data-testid="device-last-seen">
-                  {selectedDevice.lastSeen}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Status:</span>
-                <Badge 
-                  className="font-medium"
-                  style={{ 
-                    backgroundColor: getStatusColor(selectedDevice.status),
-                    color: 'white'
-                  }}
-                  data-testid="device-status"
-                >
-                  {selectedDevice.status}
-                </Badge>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

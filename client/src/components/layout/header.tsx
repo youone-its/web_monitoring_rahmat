@@ -59,29 +59,6 @@ export default function Header() {
 
           {/* User Profile and Actions */}
           <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="relative p-2 text-gray-600 hover:text-primary"
-                  data-testid="notifications-button"
-                >
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuItem className="font-medium">
-                  Notifications
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-sm text-gray-600">
-                  No new notifications
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
             {/* User Avatar */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

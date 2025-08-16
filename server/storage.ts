@@ -1,4 +1,10 @@
-import { type Device, type InsertDevice, type GpsLocation, type InsertGpsLocation, type Alert, type InsertAlert } from "@shared/schema";
+import { type Device as BaseDevice, type InsertDevice, type GpsLocation, type InsertGpsLocation, type Alert, type InsertAlert } from "@shared/schema";
+import { spawnSync } from "child_process";
+
+// Extend Device type in-memory for demo/dev only
+type Device = BaseDevice & {
+  bluetoothDevices?: string[];
+};
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -34,7 +40,7 @@ export class MemStorage implements IStorage {
   }
 
   private initializeSampleData() {
-    // Create sample devices
+    // Create sample devices with bluetoothDevices property
     const sampleDevices: Device[] = [
       {
         id: "device-001",
@@ -54,6 +60,12 @@ export class MemStorage implements IStorage {
         storageUsage: 45,
         lastSeen: new Date(),
         createdAt: new Date(),
+        // Add some connected Bluetooth devices for demo
+        bluetoothDevices: [
+          "R32-CM",
+          "Redmi Note 13 Pro 5G Off",
+          "Redmi Note 13 Pro 5G"
+        ],
       },
       {
         id: "device-002",
@@ -73,6 +85,7 @@ export class MemStorage implements IStorage {
         storageUsage: 32,
         lastSeen: new Date(),
         createdAt: new Date(),
+        bluetoothDevices: [],
       },
       {
         id: "device-003",
@@ -92,6 +105,7 @@ export class MemStorage implements IStorage {
         storageUsage: 78,
         lastSeen: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
         createdAt: new Date(),
+        bluetoothDevices: ["Bluetooth Speaker"],
       },
     ];
 
@@ -144,7 +158,58 @@ export class MemStorage implements IStorage {
   }
 
   async getDevices(): Promise<Device[]> {
-    return Array.from(this.devices.values());
+    // Run the Python script to get real system info
+    let systemDevice: any = {
+      id: "local-system",
+      name: "Local System",
+      type: "sensor",
+      status: "online",
+      batteryLevel: null,
+      temperature: null,
+      signalStrength: null,
+      networkType: null,
+      dataUsage: null,
+      uptime: null,
+      cpuTemp: null,
+      gpuTemp: null,
+      cpuUsage: null,
+      memoryUsage: null,
+      storageUsage: null,
+      lastSeen: new Date(),
+      createdAt: new Date(),
+      bluetoothDevices: [],
+    };
+    try {
+      const py = spawnSync("python3", ["./server/system_status_linux.py"]);
+      if (py.status === 0 && py.stdout) {
+        const parsed = JSON.parse(py.stdout.toString());
+        systemDevice = {
+          id: "local-system",
+          name: parsed.hostname || "Local System",
+          type: "sensor",
+          status: parsed.wifiConnected ? "online" : "offline",
+          batteryLevel: parsed.batteryLevel,
+          temperature: null,
+          signalStrength: null,
+          networkType: parsed.wifiSSID || null,
+          wifiConnected: parsed.wifiConnected,
+          wifiSSID: parsed.wifiSSID,
+          dataUsage: null,
+          uptime: parsed.uptime,
+          cpuTemp: null,
+          gpuTemp: null,
+          cpuUsage: parsed.cpuUsage,
+          memoryUsage: parsed.memoryUsage,
+          storageUsage: null,
+          lastSeen: parsed.lastSeen ? new Date(parsed.lastSeen) : new Date(),
+          createdAt: new Date(),
+          bluetoothDevices: parsed.bluetoothDevices || [],
+        };
+      }
+    } catch (e) {
+      // fallback to default
+    }
+    return [systemDevice, ...Array.from(this.devices.values())];
   }
 
   async getDevice(id: string): Promise<Device | undefined> {
@@ -158,6 +223,18 @@ export class MemStorage implements IStorage {
       id,
       lastSeen: new Date(),
       createdAt: new Date(),
+      status: insertDevice.status ?? "offline",
+      batteryLevel: insertDevice.batteryLevel ?? 100,
+      temperature: insertDevice.temperature ?? 0,
+      signalStrength: insertDevice.signalStrength ?? 0,
+      networkType: insertDevice.networkType ?? "4G LTE",
+      dataUsage: insertDevice.dataUsage ?? 0,
+      uptime: insertDevice.uptime ?? 0,
+      cpuTemp: insertDevice.cpuTemp ?? 0,
+      gpuTemp: insertDevice.gpuTemp ?? 0,
+      cpuUsage: insertDevice.cpuUsage ?? 0,
+      memoryUsage: insertDevice.memoryUsage ?? 0,
+      storageUsage: insertDevice.storageUsage ?? 0,
     };
     this.devices.set(id, device);
     return device;
@@ -198,6 +275,7 @@ export class MemStorage implements IStorage {
       ...insertLocation,
       id,
       timestamp: new Date(),
+      accuracy: insertLocation.accuracy ?? 0,
     };
     this.gpsLocations.set(id, location);
     return location;
@@ -218,6 +296,8 @@ export class MemStorage implements IStorage {
       ...insertAlert,
       id,
       createdAt: new Date(),
+      severity: insertAlert.severity ?? "warning",
+      resolved: insertAlert.resolved ?? false,
     };
     this.alerts.set(id, alert);
     return alert;
